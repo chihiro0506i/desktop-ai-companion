@@ -17,7 +17,6 @@ type PetState = {
   bubbleText: string;
   messages: ChatMessage[];
   settings: PetSettings;
-  isChatOpen: boolean;
   isSettingsOpen: boolean;
   isLoading: boolean;
   setEmotion: (emotion: PetEmotion, action?: PetAction) => void;
@@ -25,8 +24,6 @@ type PetState = {
   addMessage: (message: Omit<ChatMessage, "id" | "createdAt">) => ChatMessage;
   clearMessages: () => void;
   setSettings: (settings: Partial<PetSettings>) => void;
-  toggleChat: () => void;
-  setChatOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   setLoading: (loading: boolean) => void;
   resetSettings: () => void;
@@ -64,7 +61,6 @@ export const usePetStore = create<PetState>((set, get) => {
     bubbleText: messages.at(-1)?.text ?? initialGreeting,
     messages,
     settings: loadSettings(),
-    isChatOpen: true,
     isSettingsOpen: false,
     isLoading: false,
     setEmotion: (emotion, action = "none") => set({ emotion, action }),
@@ -100,8 +96,6 @@ export const usePetStore = create<PetState>((set, get) => {
       saveSettings(settings);
       set({ settings });
     },
-    toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
-    setChatOpen: (isChatOpen) => set({ isChatOpen }),
     setSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
     setLoading: (isLoading) => set({ isLoading }),
     resetSettings: () => {

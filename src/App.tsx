@@ -10,12 +10,10 @@ export default function App() {
   const bubbleText = usePetStore((state) => state.bubbleText);
   const action = usePetStore((state) => state.action);
   const emotion = usePetStore((state) => state.emotion);
-  const isChatOpen = usePetStore((state) => state.isChatOpen);
   const isSettingsOpen = usePetStore((state) => state.isSettingsOpen);
   const isLoading = usePetStore((state) => state.isLoading);
   const settings = usePetStore((state) => state.settings);
   const setEmotion = usePetStore((state) => state.setEmotion);
-  const setChatOpen = usePetStore((state) => state.setChatOpen);
   const setSettingsOpen = usePetStore((state) => state.setSettingsOpen);
 
   useEffect(() => {
@@ -40,18 +38,9 @@ export default function App() {
   return (
     <main className={settings.transparentWindow ? "app app--transparent" : "app app--debug"}>
       <section className="pet-stage" style={{ ["--pet-size" as string]: `${settings.petSize}px` }}>
-        <div className="floating-controls" aria-label="操作">
-          <button type="button" onClick={() => setChatOpen(!isChatOpen)} aria-label="会話を開閉">
-            {isChatOpen ? "-" : "+"}
-          </button>
-          <button type="button" onClick={() => setSettingsOpen(true)} aria-label="設定を開く">
-            ⚙
-          </button>
-        </div>
+        <SpeechBubble text={bubbleText} />
 
-        {isChatOpen && <SpeechBubble text={bubbleText} />}
-
-        <button className="pet-button" type="button" onClick={() => setChatOpen(!isChatOpen)}>
+        <div className="pet-button" aria-label={settings.characterName}>
           <Pet
             emotion={emotion}
             action={action}
@@ -59,9 +48,14 @@ export default function App() {
             name={settings.characterName}
             size={settings.petSize}
           />
-        </button>
+        </div>
 
-        {isChatOpen && <ChatInput />}
+        <div className="chat-row">
+          <ChatInput />
+          <button className="settings-fab" type="button" onClick={() => setSettingsOpen(true)} aria-label="設定を開く">
+            ⚙
+          </button>
+        </div>
 
         <SettingsPanel open={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
       </section>

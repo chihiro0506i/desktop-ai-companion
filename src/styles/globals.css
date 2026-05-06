@@ -63,23 +63,12 @@ button {
 
 .pet-button,
 .chat-input,
+.settings-fab,
 .settings-drawer,
-.settings-drawer *,
-.floating-controls,
-.floating-controls * {
+.settings-drawer * {
   -webkit-app-region: no-drag;
 }
 
-.floating-controls {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 20;
-  display: flex;
-  gap: 6px;
-}
-
-.floating-controls button,
 .icon-button {
   display: grid;
   place-items: center;
@@ -100,7 +89,7 @@ button {
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: default;
 }
 
 .pet {
@@ -259,7 +248,15 @@ button {
   display: grid;
   grid-template-columns: 1fr 52px;
   gap: 6px;
-  width: min(100%, 308px);
+  width: 100%;
+}
+
+.chat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 6px;
+  width: min(100%, 348px);
+  align-items: stretch;
 }
 
 .chat-input input,
@@ -302,6 +299,25 @@ button {
 .chat-input button:disabled {
   cursor: not-allowed;
   opacity: 0.56;
+}
+
+.settings-fab {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 40px;
+  border: 1px solid rgb(32 36 42 / 12%);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 72%);
+  color: #4d5861;
+  box-shadow: 0 8px 18px rgb(20 26 32 / 10%);
+  cursor: pointer;
+  opacity: 0.72;
+}
+
+.settings-fab:hover,
+.settings-fab:focus-visible {
+  opacity: 1;
 }
 
 .settings-drawer {

@@ -202,7 +202,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
             <label>
               <span>全感情に同じ画像</span>
               <input
-                placeholder="/image all と同じ"
+                placeholder="画像URLまたはローカル画像パス"
                 onBlur={(event) => {
                   if (event.target.value.trim()) {
                     setAllImages(event.target.value);
@@ -219,7 +219,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                   </span>
                   <input
                     value={settings.characterImages[emotion]}
-                    placeholder={`${emotion} の画像URL / file path`}
+                    placeholder={`${emotion} の画像`}
                     onChange={(event) => setEmotionImage(emotion, event.target.value)}
                     onBlur={(event) => normalizeEmotionImage(emotion, event.target.value)}
                   />
