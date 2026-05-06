@@ -70,6 +70,56 @@ function parseImageCommand(commandBody: string, currentImages: CharacterImages):
   };
 }
 
+async function resolveImageFolderCommand(commandBody: string): Promise<ImageCommandResult> {
+  const folderPath = commandBody.replace(/^folder\s+/i, "").trim();
+
+  if (!folderPath) {
+    return {
+      images: createEmptyCharacterImages(),
+      reply: "使い方: /image folder private-images",
+      ok: false
+    };
+  }
+
+  if (!window.desktopPet?.resolveImageFolder) {
+    return {
+      images: createEmptyCharacterImages(),
+      reply: "画像フォルダの読み取りAPIが利用できません。",
+      ok: false
+    };
+  }
+
+  try {
+    const images = await window.desktopPet.resolveImageFolder(folderPath);
+    const foundEmotions = petEmotions.filter((emotion) => images[emotion]);
+    const missingEmotions = petEmotions.filter((emotion) => !images[emotion]);
+
+    if (foundEmotions.length === 0) {
+      return {
+        images,
+        reply: "指定フォルダ内に感情名を含む画像ファイルが見つかりませんでした。",
+        ok: false
+      };
+    }
+
+    return {
+      images,
+      reply:
+        missingEmotions.length > 0
+          ? `画像を${foundEmotions.length}件読み込みました。不足: ${missingEmotions.join(", ")}`
+          : "すべての感情画像を読み込みました。",
+      ok: true
+    };
+  } catch (error) {
+    console.error("Failed to resolve image folder", error);
+    return {
+      images: createEmptyCharacterImages(),
+      reply: "画像フォルダを読み取れませんでした。パスを確認してください。",
+      ok: false
+    };
+  }
+}
+
 export function ChatInput() {
   const [input, setInput] = useState("");
   const addMessage = usePetStore((state) => state.addMessage);
@@ -92,11 +142,21 @@ export function ChatInput() {
     setInput("");
 
     if (message.toLowerCase().startsWith("/image ")) {
-      const result = parseImageCommand(message.slice(7), settings.characterImages);
+      const commandBody = message.slice(7).trim();
+      const result = commandBody.toLowerCase().startsWith("folder ")
+        ? await resolveImageFolderCommand(commandBody)
+        : parseImageCommand(commandBody, settings.characterImages);
 
       addMessage({ role: "user", text: message });
       addMessage({ role: "pet", text: result.reply });
-      setSettings({ characterImages: result.images });
+      setSettings({
+        characterImages: result.ok
+          ? {
+              ...settings.characterImages,
+              ...result.images
+            }
+          : settings.characterImages
+      });
       setBubbleText(result.reply);
       setEmotion(result.ok ? "happy" : "confused", result.ok ? "wave" : "none");
       return;

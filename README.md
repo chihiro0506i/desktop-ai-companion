@@ -49,7 +49,26 @@ Windows上のローカル画像も指定できます。
 /image sleepy C:\Users\chihi\Pictures\sleepy.png
 ```
 
-内部的には `file:///C:/...` 形式へ変換して保存します。画像はユーザーが利用権を持つものを指定してください。
+アプリ配下のフォルダ内に、ファイル名へ感情キーを含む画像を置いた場合は、まとめて読み込めます。
+
+```text
+/image folder private-images
+```
+
+例:
+
+```text
+private-images/
+  pet_idle.png
+  pet_thinking.png
+  talking.png
+  pet_happy.png
+  pet_confused.png
+  pet_sleepy.png
+  pet_concerned.png
+```
+
+内部的にはアプリ専用の `pet-image://` URLへ変換して保存します。画像はユーザーが利用権を持つものを指定してください。
 
 現在の感情キーは次の7種類です。
 
@@ -128,7 +147,12 @@ npm run dist
 - 音声入力と音声出力は未実装です。
 - 画面監視、ファイル操作、OSコマンド自動実行は実装していません。
 - 透明ウィンドウ設定の完全な切り替えには、将来的にBrowserWindow再作成処理を入れる余地があります。
-- ローカル画像の表示可否はElectronの実行モードやパス形式に依存します。うまく出ない場合は `file:///C:/...` 形式またはHTTPで配信される画像URLを使ってください。
+- 画像素材はこのリポジトリに含めません。ユーザーが自分で利用権を持つ画像を指定してください。
+- `/image folder` は安全のためアプリ配下の相対フォルダだけを対象にします。任意の場所にある画像は `/image idle C:\path\idle.png` のように個別指定してください。
+
+## ライセンス
+
+コードはMIT Licenseです。画像素材はリポジトリに含めず、各ユーザーが利用権を持つものを設定する前提です。
 
 ## 今後の拡張予定
 

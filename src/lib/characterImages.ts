@@ -45,8 +45,18 @@ export function mergeCharacterImages(
 export function normalizeImageSource(value: string): string {
   const trimmed = value.trim();
 
-  if (/^https?:\/\//i.test(trimmed) || /^file:\/\/\//i.test(trimmed)) {
+  if (/^https?:\/\//i.test(trimmed) || /^pet-image:\/\//i.test(trimmed)) {
     return trimmed;
+  }
+
+  if (/^file:\/\//i.test(trimmed)) {
+    try {
+      const fileUrl = new URL(trimmed);
+      const filePath = decodeURIComponent(fileUrl.pathname).replace(/^\/+/, "");
+      return `pet-image://local/${encodeURI(filePath)}`;
+    } catch {
+      return "";
+    }
   }
 
   if (/^data:image\//i.test(trimmed)) {
@@ -54,7 +64,7 @@ export function normalizeImageSource(value: string): string {
   }
 
   if (/^[a-zA-Z]:[\\/]/.test(trimmed)) {
-    return `file:///${trimmed.replaceAll("\\", "/")}`;
+    return `pet-image://local/${encodeURI(trimmed.replaceAll("\\", "/"))}`;
   }
 
   return "";

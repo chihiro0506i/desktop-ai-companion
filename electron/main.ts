@@ -1,7 +1,9 @@
-import { app, BrowserWindow, ipcMain, screen } from "electron";
+import { app, BrowserWindow, ipcMain, net, protocol, screen } from "electron";
+import { readdir } from "node:fs/promises";
 import isDev from "electron-is-dev";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { pathToFileURL } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,6 +13,10 @@ type WindowMode = {
   transparent: boolean;
 };
 
+type PetEmotion = "idle" | "thinking" | "talking" | "happy" | "confused" | "sleepy" | "concerned";
+
+type CharacterImages = Record<PetEmotion, string>;
+
 const defaultWindowMode: WindowMode = {
   alwaysOnTop: true,
   transparent: true
@@ -18,6 +24,123 @@ const defaultWindowMode: WindowMode = {
 
 let mainWindow: BrowserWindow | null = null;
 let currentWindowMode = { ...defaultWindowMode };
+
+const petEmotions: PetEmotion[] = [
+  "idle",
+  "thinking",
+  "talking",
+  "happy",
+  "confused",
+  "sleepy",
+  "concerned"
+];
+
+function createEmptyCharacterImages(): CharacterImages {
+  return {
+    idle: "",
+    thinking: "",
+    talking: "",
+    happy: "",
+    confused: "",
+    sleepy: "",
+    concerned: ""
+  };
+}
+
+function createPetImageUrl(filePath: string, scope: "app" | "local"): string {
+  const normalized = filePath.replaceAll("\\", "/");
+  return `pet-image://${scope}/${encodeURI(normalized)}`;
+}
+
+function isImageFilePath(filePath: string): boolean {
+  return /\.(png|jpe?g|webp|gif)$/i.test(filePath);
+}
+
+function resolvePetImagePath(url: URL): string {
+  const decodedPath = decodeURIComponent(url.pathname).replace(/^\/+/, "");
+
+  if (!isImageFilePath(decodedPath)) {
+    throw new Error("Only image files are allowed.");
+  }
+
+  if (url.hostname === "app") {
+    const appPath = app.getAppPath();
+    const resolved = path.resolve(appPath, decodedPath);
+    const relative = path.relative(appPath, resolved);
+
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+      throw new Error("App image path must stay inside the app directory.");
+    }
+
+    return resolved;
+  }
+
+  if (url.hostname === "local") {
+    const normalized = path.normalize(decodedPath);
+
+    if (!path.isAbsolute(normalized)) {
+      throw new Error("Local image path must be absolute.");
+    }
+
+    return normalized;
+  }
+
+  throw new Error("Unknown image scope.");
+}
+
+function registerPetImageProtocol(): void {
+  protocol.handle("pet-image", (request) => {
+    try {
+      const resolved = resolvePetImagePath(new URL(request.url));
+      return net.fetch(pathToFileURL(resolved).toString());
+    } catch (error) {
+      console.error("Blocked pet-image request", error);
+      return new Response(null, { status: 404 });
+    }
+  });
+}
+
+function resolveImageFolderPath(folderPath: string): string {
+  const trimmed = folderPath.trim();
+  const appPath = app.getAppPath();
+
+  if (!trimmed) {
+    return appPath;
+  }
+
+  if (path.isAbsolute(trimmed)) {
+    throw new Error("Image folder must be relative to the app directory.");
+  }
+
+  const resolved = path.resolve(appPath, trimmed);
+  const relative = path.relative(appPath, resolved);
+
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error("Relative image folder must stay inside the app directory.");
+  }
+
+  return resolved;
+}
+
+async function resolveCharacterImagesFromFolder(folderPath: string): Promise<CharacterImages> {
+  const resolvedFolder = resolveImageFolderPath(folderPath);
+  const entries = await readdir(resolvedFolder, { withFileTypes: true });
+  const imageFiles = entries
+    .filter((entry) => entry.isFile() && /\.(png|jpe?g|webp|gif)$/i.test(entry.name))
+    .slice(0, 200)
+    .map((entry) => entry.name);
+  const images = createEmptyCharacterImages();
+
+  for (const emotion of petEmotions) {
+    const matched = imageFiles.find((fileName) => fileName.toLowerCase().includes(emotion));
+
+    if (matched) {
+      images[emotion] = createPetImageUrl(path.join(resolvedFolder, matched), "local");
+    }
+  }
+
+  return images;
+}
 
 function createWindow(): void {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -58,7 +181,20 @@ function createWindow(): void {
   }
 }
 
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "pet-image",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true
+    }
+  }
+]);
+
 app.whenReady().then(() => {
+  registerPetImageProtocol();
+
   ipcMain.handle("window:set-mode", (_event, mode: Partial<WindowMode>) => {
     currentWindowMode = {
       ...currentWindowMode,
@@ -74,6 +210,9 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("window:get-mode", () => currentWindowMode);
+  ipcMain.handle("images:resolve-folder", async (_event, folderPath: string) => {
+    return resolveCharacterImagesFromFolder(folderPath);
+  });
 
   createWindow();
 

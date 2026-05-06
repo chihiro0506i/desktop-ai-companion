@@ -1,5 +1,5 @@
 import type { ChatMessage, PetSettings } from "../types/pet";
-import { createEmptyCharacterImages, mergeCharacterImages } from "./characterImages";
+import { createEmptyCharacterImages, mergeCharacterImages, normalizeImageSource, petEmotions } from "./characterImages";
 
 const settingsKey = "local-llm-desktop-pet:settings";
 const messagesKey = "local-llm-desktop-pet:messages";
@@ -25,12 +25,21 @@ export function loadSettings(): PetSettings {
 
   try {
     const parsed = JSON.parse(raw) as Partial<PetSettings> & { characterImageSrc?: string };
-    const legacyImageSrc = typeof parsed.characterImageSrc === "string" ? parsed.characterImageSrc : "";
+    const legacyImageSrc =
+      typeof parsed.characterImageSrc === "string" ? normalizeImageSource(parsed.characterImageSrc) : "";
+    const loadedImages = mergeCharacterImages(parsed.characterImages, legacyImageSrc);
+    const characterImages = petEmotions.reduce(
+      (images, emotion) => ({
+        ...images,
+        [emotion]: normalizeImageSource(loadedImages[emotion]) || defaultSettings.characterImages[emotion]
+      }),
+      defaultSettings.characterImages
+    );
 
     return {
       ...defaultSettings,
       ...parsed,
-      characterImages: mergeCharacterImages(parsed.characterImages, legacyImageSrc)
+      characterImages
     };
   } catch (error) {
     console.error("Failed to load settings", error);
