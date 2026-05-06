@@ -5,6 +5,7 @@ release/
 AGENTS.md
 image/
 images/
+documents/
 
 .env
 .env.*
