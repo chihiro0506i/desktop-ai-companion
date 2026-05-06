@@ -13,7 +13,7 @@ export const defaultSettings: PetSettings = {
   systemStyle: "短く、親しみやすく、作業を邪魔しない相棒として返答する。",
   historyLimit: 12,
   selfTalkEnabled: true,
-  selfTalkIntervalMinutes: 4,
+  selfTalkIntervalMinutes: 1,
   alwaysOnTop: true,
   transparentWindow: true
 };

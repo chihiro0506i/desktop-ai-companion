@@ -50,8 +50,16 @@ const fallbackSelfTalk = [
   "無理せずいきましょう。"
 ];
 
+const firstSelfTalkDelayMs = 30 * 1000;
+const selfTalkPollMs = 5 * 1000;
+const bubbleVisibleMs = 8 * 1000;
+
 function chooseFallbackSelfTalk(): string {
   return fallbackSelfTalk[Math.floor(Math.random() * fallbackSelfTalk.length)] ?? fallbackSelfTalk[0];
+}
+
+function getSelfTalkDelayMs(intervalMinutes: number): number {
+  return Math.max(1, intervalMinutes) * 60 * 1000;
 }
 
 export default function App() {
@@ -69,7 +77,37 @@ export default function App() {
   const [autonomousPose, setAutonomousPose] = useState<AutonomousPose>(idlePose);
   const [interaction, setInteraction] = useState<InteractivePose>(idleInteraction);
   const [controlsOpen, setControlsOpen] = useState(false);
+  const [bubbleVisible, setBubbleVisible] = useState(false);
   const selfTalkBusyRef = useRef(false);
+  const hasSelfTalkRunRef = useRef(false);
+  const latestMessagesRef = useRef(messages);
+  const latestSettingsRef = useRef(settings);
+  const nextSelfTalkAtRef = useRef(Date.now() + firstSelfTalkDelayMs);
+
+  useEffect(() => {
+    latestMessagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    latestSettingsRef.current = settings;
+  }, [settings]);
+
+  useEffect(() => {
+    if (controlsOpen || isSettingsOpen) {
+      setBubbleVisible(true);
+      return;
+    }
+
+    if (!bubbleVisible) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setBubbleVisible(false);
+    }, bubbleVisibleMs);
+
+    return () => window.clearTimeout(timer);
+  }, [bubbleText, bubbleVisible, controlsOpen, isSettingsOpen]);
 
   useEffect(() => {
     window.desktopPet?.setWindowMode({
@@ -104,25 +142,51 @@ export default function App() {
   }, [isLoading, isSettingsOpen]);
 
   useEffect(() => {
-    if (!settings.selfTalkEnabled || isLoading || selfTalkBusyRef.current || isSettingsOpen || controlsOpen) {
-      return;
+    function markActivity() {
+      const delay = hasSelfTalkRunRef.current
+        ? getSelfTalkDelayMs(latestSettingsRef.current.selfTalkIntervalMinutes)
+        : firstSelfTalkDelayMs;
+      nextSelfTalkAtRef.current = Date.now() + delay;
     }
 
-    const delay = Math.max(1, settings.selfTalkIntervalMinutes) * 60 * 1000;
+    window.addEventListener("pointerdown", markActivity);
+    window.addEventListener("keydown", markActivity);
+
+    return () => {
+      window.removeEventListener("pointerdown", markActivity);
+      window.removeEventListener("keydown", markActivity);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
-    const timer = window.setTimeout(async () => {
+    async function runSelfTalk() {
+      if (
+        cancelled ||
+        !latestSettingsRef.current.selfTalkEnabled ||
+        isLoading ||
+        isSettingsOpen ||
+        selfTalkBusyRef.current ||
+        Date.now() < nextSelfTalkAtRef.current
+      ) {
+        return;
+      }
+
       selfTalkBusyRef.current = true;
+      nextSelfTalkAtRef.current = Date.now() + getSelfTalkDelayMs(latestSettingsRef.current.selfTalkIntervalMinutes);
 
       try {
-        const result = await askSelfTalkOllama(settings, messages);
+        const result = await askSelfTalkOllama(latestSettingsRef.current, latestMessagesRef.current);
 
         if (cancelled) {
           return;
         }
 
         addMessage({ role: "pet", text: result.reply });
+        hasSelfTalkRunRef.current = true;
         setBubbleText(result.reply);
+        setBubbleVisible(true);
         setEmotion(result.emotion, result.action);
       } catch (error) {
         if (cancelled) {
@@ -132,30 +196,28 @@ export default function App() {
         console.warn("Self-talk fell back to local phrase", error);
         const reply = chooseFallbackSelfTalk();
         addMessage({ role: "pet", text: reply });
+        hasSelfTalkRunRef.current = true;
         setBubbleText(reply);
+        setBubbleVisible(true);
         setEmotion("idle", "none");
       } finally {
         selfTalkBusyRef.current = false;
       }
-    }, delay);
+    }
+
+    const timer = window.setInterval(() => {
+      void runSelfTalk();
+    }, selfTalkPollMs);
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      window.clearInterval(timer);
     };
-  }, [
-    addMessage,
-    controlsOpen,
-    isLoading,
-    isSettingsOpen,
-    messages,
-    setBubbleText,
-    setEmotion,
-    settings
-  ]);
+  }, [addMessage, isLoading, isSettingsOpen, setBubbleText, setEmotion]);
 
   function toggleControls() {
     setControlsOpen((open) => !open);
+    setBubbleVisible(true);
   }
 
   function handlePetPointerMove(event: PointerEvent<HTMLDivElement>) {
@@ -189,7 +251,7 @@ export default function App() {
   return (
     <main className={settings.transparentWindow ? "app app--transparent" : "app app--debug"}>
       <section className="pet-stage" style={{ ["--pet-size" as string]: `${settings.petSize}px` }}>
-        <SpeechBubble text={bubbleText} />
+        {bubbleVisible && <SpeechBubble text={bubbleText} />}
 
         <div
           className={`pet-button pet-button--autonomous ${interaction.pressed ? "is-pressed" : ""}`}
@@ -225,7 +287,7 @@ export default function App() {
 
         {controlsOpen && (
           <div className="chat-row">
-            <ChatInput />
+            <ChatInput onBubbleRequest={() => setBubbleVisible(true)} />
             <button className="settings-fab" type="button" onClick={() => setSettingsOpen(true)} aria-label="設定を開く">
               ⚙
             </button>

@@ -2,7 +2,11 @@ import { FormEvent, useState } from "react";
 import { askOllama, OllamaError } from "../lib/ollamaClient";
 import { usePetStore } from "../state/petStore";
 
-export function ChatInput() {
+type ChatInputProps = {
+  onBubbleRequest?: () => void;
+};
+
+export function ChatInput({ onBubbleRequest }: ChatInputProps) {
   const [input, setInput] = useState("");
   const addMessage = usePetStore((state) => state.addMessage);
   const messages = usePetStore((state) => state.messages);
@@ -24,6 +28,7 @@ export function ChatInput() {
 
     const userMessage = addMessage({ role: "user", text: message });
     setBubbleText("考えています...");
+    onBubbleRequest?.();
     setEmotion("thinking", "nod");
     setLoading(true);
 
@@ -31,6 +36,7 @@ export function ChatInput() {
       const result = await askOllama(message, settings, [...messages, userMessage]);
       addMessage({ role: "pet", text: result.reply });
       setBubbleText(result.reply);
+      onBubbleRequest?.();
       setEmotion(result.emotion, result.action);
     } catch (error) {
       const fallback =
@@ -41,6 +47,7 @@ export function ChatInput() {
       console.error("Chat request failed", error);
       addMessage({ role: "pet", text: fallback });
       setBubbleText(fallback);
+      onBubbleRequest?.();
       setEmotion("confused", "none");
     } finally {
       setLoading(false);
