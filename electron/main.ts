@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, net, protocol, screen } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, net, protocol, screen } from "electron";
 import { readdir } from "node:fs/promises";
 import isDev from "electron-is-dev";
 import path from "node:path";
@@ -124,6 +124,10 @@ function resolveImageFolderPath(folderPath: string): string {
 
 async function resolveCharacterImagesFromFolder(folderPath: string): Promise<CharacterImages> {
   const resolvedFolder = resolveImageFolderPath(folderPath);
+  return resolveCharacterImagesFromAbsoluteFolder(resolvedFolder);
+}
+
+async function resolveCharacterImagesFromAbsoluteFolder(resolvedFolder: string): Promise<CharacterImages> {
   const entries = await readdir(resolvedFolder, { withFileTypes: true });
   const imageFiles = entries
     .filter((entry) => entry.isFile() && /\.(png|jpe?g|webp|gif)$/i.test(entry.name))
@@ -140,6 +144,46 @@ async function resolveCharacterImagesFromFolder(folderPath: string): Promise<Cha
   }
 
   return images;
+}
+
+async function selectImageFile(): Promise<string | null> {
+  if (!mainWindow) {
+    return null;
+  }
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "キャラクター画像を選択",
+    properties: ["openFile"],
+    filters: [
+      {
+        name: "Images",
+        extensions: ["png", "jpg", "jpeg", "webp", "gif"]
+      }
+    ]
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+
+  return createPetImageUrl(result.filePaths[0], "local");
+}
+
+async function selectImageFolder(): Promise<CharacterImages | null> {
+  if (!mainWindow) {
+    return null;
+  }
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "感情別画像フォルダを選択",
+    properties: ["openDirectory"]
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+
+  return resolveCharacterImagesFromAbsoluteFolder(result.filePaths[0]);
 }
 
 function createWindow(): void {
@@ -212,6 +256,12 @@ app.whenReady().then(() => {
   ipcMain.handle("window:get-mode", () => currentWindowMode);
   ipcMain.handle("images:resolve-folder", async (_event, folderPath: string) => {
     return resolveCharacterImagesFromFolder(folderPath);
+  });
+  ipcMain.handle("images:select-file", async () => {
+    return selectImageFile();
+  });
+  ipcMain.handle("images:select-folder", async () => {
+    return selectImageFolder();
   });
 
   createWindow();

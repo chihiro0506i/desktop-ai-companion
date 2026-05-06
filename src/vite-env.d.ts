@@ -13,5 +13,7 @@ interface Window {
     getWindowMode: () => Promise<DesktopPetWindowMode>;
     setWindowMode: (mode: Partial<DesktopPetWindowMode>) => Promise<DesktopPetWindowMode>;
     resolveImageFolder: (folderPath: string) => Promise<DesktopPetCharacterImages>;
+    selectImageFile: () => Promise<string | null>;
+    selectImageFolder: () => Promise<DesktopPetCharacterImages | null>;
   };
 }

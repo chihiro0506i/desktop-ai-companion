@@ -5,6 +5,7 @@ import {
   petEmotionLabels,
   petEmotions
 } from "../lib/characterImages";
+import { listOllamaModels, OllamaError } from "../lib/ollamaClient";
 import { usePetStore } from "../state/petStore";
 import type { PetEmotion } from "../types/pet";
 
@@ -17,6 +18,9 @@ type SettingsTab = "character" | "images" | "ollama" | "window" | "history";
 
 export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("character");
+  const [imageStatus, setImageStatus] = useState("");
+  const [ollamaStatus, setOllamaStatus] = useState("");
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
   const messages = usePetStore((state) => state.messages);
   const settings = usePetStore((state) => state.settings);
   const setSettings = usePetStore((state) => state.setSettings);
@@ -50,6 +54,74 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     setSettings({
       characterImages: createEmptyCharacterImages(normalizeImageSource(value))
     });
+  }
+
+  async function selectEmotionImage(emotion: PetEmotion) {
+    const imageSrc = await window.desktopPet?.selectImageFile();
+
+    if (!imageSrc) {
+      return;
+    }
+
+    setEmotionImage(emotion, imageSrc);
+    setImageStatus(`${petEmotionLabels[emotion]} の画像を選択しました。`);
+  }
+
+  async function selectAllImage() {
+    const imageSrc = await window.desktopPet?.selectImageFile();
+
+    if (!imageSrc) {
+      return;
+    }
+
+    setSettings({
+      characterImages: createEmptyCharacterImages(imageSrc)
+    });
+    setImageStatus("すべての感情に同じ画像を設定しました。");
+  }
+
+  async function selectEmotionImageFolder() {
+    const images = await window.desktopPet?.selectImageFolder();
+
+    if (!images) {
+      return;
+    }
+
+    const foundEmotions = petEmotions.filter((emotion) => images[emotion]);
+    const missingEmotions = petEmotions.filter((emotion) => !images[emotion]);
+
+    setSettings({
+      characterImages: {
+        ...settings.characterImages,
+        ...images
+      }
+    });
+    setImageStatus(
+      missingEmotions.length > 0
+        ? `画像を${foundEmotions.length}件読み込みました。不足: ${missingEmotions.join(", ")}`
+        : "すべての感情画像を読み込みました。"
+    );
+  }
+
+  async function refreshOllamaModels() {
+    setOllamaStatus("接続確認中...");
+
+    try {
+      const models = await listOllamaModels(settings);
+      setAvailableModels(models);
+      setOllamaStatus(
+        models.length > 0
+          ? `接続OK。${models.length}件のモデルを取得しました。`
+          : "接続OK。モデルはまだ取得されていません。"
+      );
+    } catch (error) {
+      const message =
+        error instanceof OllamaError
+          ? error.message
+          : "Ollama接続確認中に問題が起きました。";
+      setAvailableModels([]);
+      setOllamaStatus(message);
+    }
   }
 
   if (!open) {
@@ -119,6 +191,14 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
 
         {activeTab === "images" && (
           <section className="settings-section">
+            <div className="button-row">
+              <button type="button" className="secondary-button" onClick={selectAllImage}>
+                全感情に画像を選択
+              </button>
+              <button type="button" className="secondary-button" onClick={selectEmotionImageFolder}>
+                フォルダから読込
+              </button>
+            </div>
             <label>
               <span>全感情に同じ画像</span>
               <input
@@ -143,9 +223,13 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                     onChange={(event) => setEmotionImage(emotion, event.target.value)}
                     onBlur={(event) => normalizeEmotionImage(emotion, event.target.value)}
                   />
+                  <button type="button" className="inline-button" onClick={() => selectEmotionImage(emotion)}>
+                    選択
+                  </button>
                 </label>
               ))}
             </div>
+            {imageStatus && <p className="settings-status">{imageStatus}</p>}
           </section>
         )}
 
@@ -158,6 +242,21 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                 onChange={(event) => setSettings({ modelName: event.target.value })}
               />
             </label>
+            {availableModels.length > 0 && (
+              <label>
+                <span>取得済みモデル</span>
+                <select
+                  value={settings.modelName}
+                  onChange={(event) => setSettings({ modelName: event.target.value })}
+                >
+                  {availableModels.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label>
               <span>API URL</span>
               <input
@@ -175,6 +274,10 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                 onChange={(event) => setSettings({ historyLimit: Number(event.target.value) })}
               />
             </label>
+            <button type="button" className="secondary-button" onClick={refreshOllamaModels}>
+              接続テスト / モデル取得
+            </button>
+            {ollamaStatus && <p className="settings-status">{ollamaStatus}</p>}
           </section>
         )}
 

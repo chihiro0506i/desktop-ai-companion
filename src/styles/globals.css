@@ -28,7 +28,8 @@ body,
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -263,7 +264,8 @@ button {
 
 .chat-input input,
 .settings-section input,
-.settings-section textarea {
+.settings-section textarea,
+.settings-section select {
   min-width: 0;
   border: 1px solid rgb(32 36 42 / 18%);
   border-radius: 9px;
@@ -274,7 +276,8 @@ button {
 
 .chat-input input:focus,
 .settings-section input:focus,
-.settings-section textarea:focus {
+.settings-section textarea:focus,
+.settings-section select:focus {
   border-color: #26836d;
   box-shadow: 0 0 0 3px rgb(38 131 109 / 14%);
 }
@@ -286,7 +289,8 @@ button {
 
 .chat-input button,
 .secondary-button,
-.danger-button {
+.danger-button,
+.inline-button {
   height: 40px;
   border: 0;
   border-radius: 9px;
@@ -380,6 +384,21 @@ button {
   gap: 8px;
 }
 
+.emotion-image-list label {
+  grid-template-columns: 1fr 64px;
+  align-items: end;
+}
+
+.emotion-image-list label span {
+  grid-column: 1 / -1;
+}
+
+.button-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .settings-section label {
   display: grid;
   gap: 6px;
@@ -395,6 +414,12 @@ button {
 }
 
 .settings-section input {
+  height: 38px;
+  padding: 0 10px;
+  font-weight: 400;
+}
+
+.settings-section select {
   height: 38px;
   padding: 0 10px;
   font-weight: 400;
@@ -425,6 +450,22 @@ button {
 
 .danger-button {
   background: #9d2f3d;
+}
+
+.inline-button {
+  height: 38px;
+  background: #50606a;
+  font-size: 12px;
+}
+
+.settings-status {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgb(38 131 109 / 10%);
+  color: #1d5d50;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .history-summary {

@@ -7,6 +7,13 @@ type OllamaGenerateResponse = {
   error?: string;
 };
 
+type OllamaTagsResponse = {
+  models?: Array<{
+    name?: string;
+    model?: string;
+  }>;
+};
+
 const validEmotions = new Set<PetEmotion>([
   "idle",
   "happy",
@@ -24,6 +31,37 @@ export class OllamaError extends Error {
     super(message);
     this.name = "OllamaError";
   }
+}
+
+export async function listOllamaModels(
+  settings: Pick<PetSettings, "ollamaApiUrl">
+): Promise<string[]> {
+  const endpoint = `${settings.ollamaApiUrl.replace(/\/$/, "")}/api/tags`;
+
+  let response: Response;
+
+  try {
+    response = await fetch(endpoint);
+  } catch (error) {
+    console.error("Ollama model list failed", error);
+    throw new OllamaError("Ollamaに接続できません。API URLと起動状態を確認してください。");
+  }
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    console.error("Ollama model list API error", response.status, detail);
+    throw new OllamaError("Ollamaのモデル一覧を取得できませんでした。");
+  }
+
+  const data = (await response.json()) as OllamaTagsResponse;
+  return (data.models ?? [])
+    .map((model) => model.name ?? model.model ?? "")
+    .filter((name): name is string => name.trim().length > 0)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+export async function testOllamaConnection(settings: Pick<PetSettings, "ollamaApiUrl">): Promise<void> {
+  await listOllamaModels(settings);
 }
 
 export async function askOllama(
