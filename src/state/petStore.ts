@@ -1,6 +1,15 @@
 import { create } from "zustand";
-import { defaultSettings, loadSettings, saveSettings } from "../lib/storage";
+import {
+  clearMessages as clearStoredMessages,
+  defaultSettings,
+  loadMessages,
+  loadSettings,
+  saveMessages,
+  saveSettings
+} from "../lib/storage";
 import type { ChatMessage, PetAction, PetEmotion, PetSettings } from "../types/pet";
+
+const initialGreeting = "こんにちは。そばにいます。何から始めますか？";
 
 type PetState = {
   emotion: PetEmotion;
@@ -9,13 +18,16 @@ type PetState = {
   messages: ChatMessage[];
   settings: PetSettings;
   isChatOpen: boolean;
+  isSettingsOpen: boolean;
   isLoading: boolean;
   setEmotion: (emotion: PetEmotion, action?: PetAction) => void;
   setBubbleText: (text: string) => void;
-  addMessage: (message: Omit<ChatMessage, "id" | "createdAt">) => void;
+  addMessage: (message: Omit<ChatMessage, "id" | "createdAt">) => ChatMessage;
+  clearMessages: () => void;
   setSettings: (settings: Partial<PetSettings>) => void;
   toggleChat: () => void;
   setChatOpen: (open: boolean) => void;
+  setSettingsOpen: (open: boolean) => void;
   setLoading: (loading: boolean) => void;
   resetSettings: () => void;
 };
@@ -28,38 +40,73 @@ function createMessage(message: Omit<ChatMessage, "id" | "createdAt">): ChatMess
   };
 }
 
-export const usePetStore = create<PetState>((set, get) => ({
-  emotion: "idle",
-  action: "none",
-  bubbleText: "こんにちは。なにか手伝えることはありますか？",
-  messages: [
+function getInitialMessages(): ChatMessage[] {
+  const savedMessages = loadMessages();
+
+  if (savedMessages.length > 0) {
+    return savedMessages;
+  }
+
+  return [
     createMessage({
       role: "pet",
-      text: "こんにちは。なにか手伝えることはありますか？"
+      text: initialGreeting
     })
-  ],
-  settings: loadSettings(),
-  isChatOpen: true,
-  isLoading: false,
-  setEmotion: (emotion, action = "none") => set({ emotion, action }),
-  setBubbleText: (bubbleText) => set({ bubbleText }),
-  addMessage: (message) =>
-    set((state) => ({
-      messages: [...state.messages.slice(-19), createMessage(message)]
-    })),
-  setSettings: (nextSettings) => {
-    const settings = {
-      ...get().settings,
-      ...nextSettings
-    };
-    saveSettings(settings);
-    set({ settings });
-  },
-  toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
-  setChatOpen: (isChatOpen) => set({ isChatOpen }),
-  setLoading: (isLoading) => set({ isLoading }),
-  resetSettings: () => {
-    saveSettings(defaultSettings);
-    set({ settings: defaultSettings });
-  }
-}));
+  ];
+}
+
+export const usePetStore = create<PetState>((set, get) => {
+  const messages = getInitialMessages();
+
+  return {
+    emotion: "idle",
+    action: "none",
+    bubbleText: messages.at(-1)?.text ?? initialGreeting,
+    messages,
+    settings: loadSettings(),
+    isChatOpen: true,
+    isSettingsOpen: false,
+    isLoading: false,
+    setEmotion: (emotion, action = "none") => set({ emotion, action }),
+    setBubbleText: (bubbleText) => set({ bubbleText }),
+    addMessage: (message) => {
+      const created = createMessage(message);
+      const nextMessages = [...get().messages, created].slice(-80);
+      saveMessages(nextMessages);
+      set({ messages: nextMessages });
+      return created;
+    },
+    clearMessages: () => {
+      const nextMessages = [
+        createMessage({
+          role: "pet",
+          text: initialGreeting
+        })
+      ];
+      clearStoredMessages();
+      saveMessages(nextMessages);
+      set({
+        messages: nextMessages,
+        bubbleText: initialGreeting,
+        emotion: "idle",
+        action: "none"
+      });
+    },
+    setSettings: (nextSettings) => {
+      const settings = {
+        ...get().settings,
+        ...nextSettings
+      };
+      saveSettings(settings);
+      set({ settings });
+    },
+    toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
+    setChatOpen: (isChatOpen) => set({ isChatOpen }),
+    setSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
+    setLoading: (isLoading) => set({ isLoading }),
+    resetSettings: () => {
+      saveSettings(defaultSettings);
+      set({ settings: defaultSettings });
+    }
+  };
+});

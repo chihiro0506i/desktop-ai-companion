@@ -9,6 +9,8 @@ export type PetEmotion =
 
 export type PetAction = "none" | "wave" | "jump" | "sleep" | "nod";
 
+export type CharacterImages = Record<PetEmotion, string>;
+
 export type PetLLMResponse = {
   reply: string;
   emotion: PetEmotion;
@@ -19,6 +21,10 @@ export type PetSettings = {
   ollamaApiUrl: string;
   modelName: string;
   petSize: number;
+  characterName: string;
+  characterImages: CharacterImages;
+  systemStyle: string;
+  historyLimit: number;
   alwaysOnTop: boolean;
   transparentWindow: boolean;
 };

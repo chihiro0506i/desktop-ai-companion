@@ -24,10 +24,10 @@ function createWindow(): void {
   const { width, height } = primaryDisplay.workAreaSize;
 
   mainWindow = new BrowserWindow({
-    width: 380,
-    height: 520,
-    x: Math.max(width - 420, 0),
-    y: Math.max(height - 560, 0),
+    width: 340,
+    height: 430,
+    x: Math.max(width - 360, 0),
+    y: Math.max(height - 460, 0),
     frame: false,
     transparent: currentWindowMode.transparent,
     alwaysOnTop: currentWindowMode.alwaysOnTop,
@@ -38,11 +38,17 @@ function createWindow(): void {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false
     }
   });
 
   mainWindow.setAlwaysOnTop(currentWindowMode.alwaysOnTop, "floating");
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  mainWindow.webContents.on("will-navigate", (event) => {
+    event.preventDefault();
+  });
 
   if (isDev) {
     mainWindow.loadURL("http://localhost:5173");

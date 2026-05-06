@@ -1,5 +1,5 @@
 import { buildPetPrompt } from "./petPrompt";
-import type { PetAction, PetEmotion, PetLLMResponse, PetSettings } from "../types/pet";
+import type { ChatMessage, PetAction, PetEmotion, PetLLMResponse, PetSettings } from "../types/pet";
 
 type OllamaGenerateResponse = {
   response?: string;
@@ -28,7 +28,11 @@ export class OllamaError extends Error {
 
 export async function askOllama(
   userMessage: string,
-  settings: Pick<PetSettings, "ollamaApiUrl" | "modelName">
+  settings: Pick<
+    PetSettings,
+    "ollamaApiUrl" | "modelName" | "characterName" | "systemStyle" | "historyLimit"
+  >,
+  history: ChatMessage[]
 ): Promise<PetLLMResponse> {
   const endpoint = `${settings.ollamaApiUrl.replace(/\/$/, "")}/api/generate`;
 
@@ -42,7 +46,7 @@ export async function askOllama(
       },
       body: JSON.stringify({
         model: settings.modelName,
-        prompt: buildPetPrompt(userMessage),
+        prompt: buildPetPrompt(userMessage, settings, history),
         stream: false,
         format: "json",
         think: false
@@ -50,15 +54,13 @@ export async function askOllama(
     });
   } catch (error) {
     console.error("Ollama connection failed", error);
-    throw new OllamaError("Ollamaに接続できないようです。Ollamaが起動しているか確認してください。");
+    throw new OllamaError("Ollamaに接続できません。Ollamaが起動しているか確認してください。");
   }
 
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
     console.error("Ollama API error", response.status, detail);
-    throw new OllamaError(
-      "Ollamaから応答を取得できませんでした。API URLとモデル名を確認してください。"
-    );
+    throw new OllamaError("Ollamaから応答を取得できませんでした。API URLとモデル名を確認してください。");
   }
 
   const data = (await response.json()) as OllamaGenerateResponse;

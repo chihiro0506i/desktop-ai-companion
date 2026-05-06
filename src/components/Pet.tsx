@@ -3,6 +3,8 @@ import type { PetAction, PetEmotion } from "../types/pet";
 type PetProps = {
   emotion: PetEmotion;
   action: PetAction;
+  imageSrc: string;
+  name: string;
   size: number;
 };
 
@@ -26,19 +28,27 @@ const labelMap: Record<PetEmotion, string> = {
   concerned: "concerned"
 };
 
-export function Pet({ emotion, action, size }: PetProps) {
+export function Pet({ emotion, action, imageSrc, name, size }: PetProps) {
+  const hasImage = imageSrc.trim().length > 0;
+
   return (
     <div
-      className={`pet pet--${emotion} pet-action--${action}`}
+      className={`pet pet--${emotion} pet-action--${action} ${hasImage ? "pet--image" : "pet--css"}`}
       style={{ width: size, height: size }}
-      aria-label={`pet ${labelMap[emotion]}`}
+      aria-label={`${name} ${labelMap[emotion]}`}
     >
-      <div className="pet__ear pet__ear--left" />
-      <div className="pet__ear pet__ear--right" />
-      <div className="pet__body">
-        <div className="pet__face">{faceMap[emotion]}</div>
-        <div className="pet__status">{labelMap[emotion]}</div>
-      </div>
+      {hasImage ? (
+        <img className="pet__image" src={imageSrc} alt={name} draggable={false} />
+      ) : (
+        <>
+          <div className="pet__ear pet__ear--left" />
+          <div className="pet__ear pet__ear--right" />
+          <div className="pet__body">
+            <div className="pet__face">{faceMap[emotion]}</div>
+          </div>
+        </>
+      )}
+      <div className="pet__status">{labelMap[emotion]}</div>
       <div className="pet__shadow" />
     </div>
   );

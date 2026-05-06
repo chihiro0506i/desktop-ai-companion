@@ -3,6 +3,7 @@ import { ChatInput } from "./components/ChatInput";
 import { Pet } from "./components/Pet";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SpeechBubble } from "./components/SpeechBubble";
+import { getCharacterImage } from "./lib/characterImages";
 import { usePetStore } from "./state/petStore";
 
 export default function App() {
@@ -10,10 +11,12 @@ export default function App() {
   const action = usePetStore((state) => state.action);
   const emotion = usePetStore((state) => state.emotion);
   const isChatOpen = usePetStore((state) => state.isChatOpen);
+  const isSettingsOpen = usePetStore((state) => state.isSettingsOpen);
   const isLoading = usePetStore((state) => state.isLoading);
   const settings = usePetStore((state) => state.settings);
   const setEmotion = usePetStore((state) => state.setEmotion);
   const setChatOpen = usePetStore((state) => state.setChatOpen);
+  const setSettingsOpen = usePetStore((state) => state.setSettingsOpen);
 
   useEffect(() => {
     window.desktopPet?.setWindowMode({
@@ -37,16 +40,30 @@ export default function App() {
   return (
     <main className={settings.transparentWindow ? "app app--transparent" : "app app--debug"}>
       <section className="pet-stage" style={{ ["--pet-size" as string]: `${settings.petSize}px` }}>
+        <div className="floating-controls" aria-label="操作">
+          <button type="button" onClick={() => setChatOpen(!isChatOpen)} aria-label="会話を開閉">
+            {isChatOpen ? "-" : "+"}
+          </button>
+          <button type="button" onClick={() => setSettingsOpen(true)} aria-label="設定を開く">
+            ⚙
+          </button>
+        </div>
+
         {isChatOpen && <SpeechBubble text={bubbleText} />}
+
         <button className="pet-button" type="button" onClick={() => setChatOpen(!isChatOpen)}>
-          <Pet emotion={emotion} action={action} size={settings.petSize} />
+          <Pet
+            emotion={emotion}
+            action={action}
+            imageSrc={getCharacterImage(settings.characterImages, emotion)}
+            name={settings.characterName}
+            size={settings.petSize}
+          />
         </button>
-        {isChatOpen && (
-          <div className="panel-stack">
-            <ChatInput />
-            <SettingsPanel />
-          </div>
-        )}
+
+        {isChatOpen && <ChatInput />}
+
+        <SettingsPanel open={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
       </section>
     </main>
   );
