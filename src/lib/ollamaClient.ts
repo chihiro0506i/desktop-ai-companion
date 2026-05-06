@@ -1,5 +1,5 @@
 import { buildPetPrompt, buildSelfTalkPrompt } from "./petPrompt";
-import type { ChatMessage, PetAction, PetEmotion, PetLLMResponse, PetSettings } from "../types/pet";
+import type { ChatMessage, PetAction, PetEmotion, PetLLMResponse, PetSettings, WebSearchResult } from "../types/pet";
 
 type OllamaGenerateResponse = {
   response?: string;
@@ -70,7 +70,8 @@ export async function askOllama(
     PetSettings,
     "ollamaApiUrl" | "modelName" | "characterName" | "systemStyle" | "historyLimit"
   >,
-  history: ChatMessage[]
+  history: ChatMessage[],
+  webSearchResults?: WebSearchResult[]
 ): Promise<PetLLMResponse> {
   const endpoint = `${settings.ollamaApiUrl.replace(/\/$/, "")}/api/generate`;
 
@@ -84,7 +85,7 @@ export async function askOllama(
       },
       body: JSON.stringify({
         model: settings.modelName,
-        prompt: buildPetPrompt(userMessage, settings, history),
+        prompt: buildPetPrompt(userMessage, settings, history, webSearchResults),
         stream: false,
         format: "json",
         think: false

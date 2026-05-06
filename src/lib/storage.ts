@@ -14,6 +14,14 @@ export const defaultSettings: PetSettings = {
   historyLimit: 12,
   selfTalkEnabled: true,
   selfTalkIntervalMinutes: 1,
+  webSearch: {
+    enabled: false,
+    provider: "searxng",
+    endpoint: "http://localhost:8080",
+    maxResults: 3,
+    timeoutMs: 5000,
+    autoSearch: false
+  },
   alwaysOnTop: true,
   transparentWindow: true
 };
@@ -41,7 +49,11 @@ export function loadSettings(): PetSettings {
     return {
       ...defaultSettings,
       ...parsed,
-      characterImages
+      characterImages,
+      webSearch: {
+        ...defaultSettings.webSearch,
+        ...(parsed.webSearch ?? {})
+      }
     };
   } catch (error) {
     console.error("Failed to load settings", error);

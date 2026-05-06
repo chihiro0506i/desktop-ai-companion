@@ -4,6 +4,7 @@ import isDev from "electron-is-dev";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
+import { searchWeb, type WebSearchOptions } from "./webSearch.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -232,6 +233,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("images:select-folder", async () => {
     return selectImageFolder();
+  });
+  ipcMain.handle("web-search:search", async (_event, query: string, options: WebSearchOptions) => {
+    return searchWeb(query, options);
   });
 
   createWindow();

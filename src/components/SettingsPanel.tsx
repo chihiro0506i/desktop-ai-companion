@@ -6,20 +6,22 @@ import {
   petEmotions
 } from "../lib/characterImages";
 import { listOllamaModels, OllamaError } from "../lib/ollamaClient";
+import { searchWeb, WebSearchError } from "../lib/webSearch";
 import { usePetStore } from "../state/petStore";
-import type { PetEmotion } from "../types/pet";
+import type { PetEmotion, WebSearchSettings } from "../types/pet";
 
 type SettingsPanelProps = {
   open: boolean;
   onClose: () => void;
 };
 
-type SettingsTab = "character" | "images" | "ollama" | "window" | "history";
+type SettingsTab = "character" | "images" | "ollama" | "search" | "window" | "history";
 
 export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("character");
   const [imageStatus, setImageStatus] = useState("");
   const [ollamaStatus, setOllamaStatus] = useState("");
+  const [searchStatus, setSearchStatus] = useState("");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const messages = usePetStore((state) => state.messages);
   const settings = usePetStore((state) => state.settings);
@@ -53,6 +55,15 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   function setAllImages(value: string) {
     setSettings({
       characterImages: createEmptyCharacterImages(normalizeImageSource(value))
+    });
+  }
+
+  function setWebSearchSettings(nextWebSearch: Partial<WebSearchSettings>) {
+    setSettings({
+      webSearch: {
+        ...settings.webSearch,
+        ...nextWebSearch
+      }
     });
   }
 
@@ -124,6 +135,26 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     }
   }
 
+  async function testWebSearchConnection() {
+    setSearchStatus("検索Endpointを確認中...");
+
+    try {
+      const results = await searchWeb("test", {
+        ...settings.webSearch,
+        enabled: true
+      });
+
+      setSearchStatus(`接続OK。${results.length}件の検索結果を取得しました。`);
+    } catch (error) {
+      const message =
+        error instanceof WebSearchError
+          ? error.message
+          : "Web検索接続テスト中に問題が起きました。";
+
+      setSearchStatus(message);
+    }
+  }
+
   if (!open) {
     return null;
   }
@@ -149,6 +180,9 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
         </button>
         <button type="button" className={activeTab === "ollama" ? "is-active" : ""} onClick={() => setActiveTab("ollama")}>
           Ollama
+        </button>
+        <button type="button" className={activeTab === "search" ? "is-active" : ""} onClick={() => setActiveTab("search")}>
+          Search
         </button>
         <button type="button" className={activeTab === "window" ? "is-active" : ""} onClick={() => setActiveTab("window")}>
           Window
@@ -300,6 +334,77 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
           </section>
         )}
 
+        {activeTab === "search" && (
+          <section className="settings-section">
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={settings.webSearch.enabled}
+                onChange={(event) => setWebSearchSettings({ enabled: event.target.checked })}
+              />
+              <span>Web検索を有効にする</span>
+            </label>
+            <label>
+              <span>Provider</span>
+              <select
+                value={settings.webSearch.provider}
+                onChange={(event) =>
+                  setWebSearchSettings({ provider: event.target.value as WebSearchSettings["provider"] })
+                }
+              >
+                <option value="searxng">SearXNG</option>
+                <option value="disabled">Disabled</option>
+                <option value="api">API (未実装)</option>
+              </select>
+            </label>
+            <label>
+              <span>Endpoint</span>
+              <input
+                value={settings.webSearch.endpoint}
+                placeholder="http://localhost:8080"
+                onChange={(event) => setWebSearchSettings({ endpoint: event.target.value })}
+              />
+            </label>
+            <label>
+              <span>最大件数 {settings.webSearch.maxResults}件</span>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={settings.webSearch.maxResults}
+                onChange={(event) => setWebSearchSettings({ maxResults: Number(event.target.value) })}
+              />
+            </label>
+            <label>
+              <span>Timeout {settings.webSearch.timeoutMs}ms</span>
+              <input
+                type="range"
+                min="1000"
+                max="10000"
+                step="500"
+                value={settings.webSearch.timeoutMs}
+                onChange={(event) => setWebSearchSettings({ timeoutMs: Number(event.target.value) })}
+              />
+            </label>
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={settings.webSearch.autoSearch}
+                disabled={!settings.webSearch.enabled}
+                onChange={(event) => setWebSearchSettings({ autoSearch: event.target.checked })}
+              />
+              <span>最新情報らしい質問で自動検索する</span>
+            </label>
+            <button type="button" className="secondary-button" onClick={testWebSearchConnection}>
+              接続テスト
+            </button>
+            <p className="settings-status">
+              明示検索は入力欄で `/web 検索語` と送信します。Endpointは `https://` またはローカルHTTPだけ許可します。
+            </p>
+            {searchStatus && <p className="settings-status">{searchStatus}</p>}
+          </section>
+        )}
+
         {activeTab === "window" && (
           <section className="settings-section">
             <label className="toggle-row">
@@ -337,6 +442,15 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                 <article key={message.id} className={`history-item history-item--${message.role}`}>
                   <span>{message.role === "user" ? "You" : settings.characterName}</span>
                   <p>{message.text}</p>
+                  {message.sources && message.sources.length > 0 && (
+                    <div className="history-sources" aria-label="参照元">
+                      {message.sources.map((source, index) => (
+                        <p key={`${message.id}-${index}-${source.url}`}>
+                          [{index + 1}] {source.title} {source.url}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

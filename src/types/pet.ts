@@ -11,6 +11,25 @@ export type PetAction = "none" | "wave" | "jump" | "sleep" | "nod";
 
 export type CharacterImages = Record<PetEmotion, string>;
 
+export type WebSearchProvider = "disabled" | "searxng" | "api";
+
+export type WebSearchSettings = {
+  enabled: boolean;
+  provider: WebSearchProvider;
+  endpoint: string;
+  maxResults: number;
+  timeoutMs: number;
+  autoSearch: boolean;
+};
+
+export type WebSearchResult = {
+  title: string;
+  url: string;
+  snippet: string;
+  source: string;
+  fetchedAt: number;
+};
+
 export type PetLLMResponse = {
   reply: string;
   emotion: PetEmotion;
@@ -27,6 +46,7 @@ export type PetSettings = {
   historyLimit: number;
   selfTalkEnabled: boolean;
   selfTalkIntervalMinutes: number;
+  webSearch: WebSearchSettings;
   alwaysOnTop: boolean;
   transparentWindow: boolean;
 };
@@ -36,4 +56,5 @@ export type ChatMessage = {
   role: "user" | "pet";
   text: string;
   createdAt: number;
+  sources?: WebSearchResult[];
 };
