@@ -100,33 +100,6 @@ function registerPetImageProtocol(): void {
   });
 }
 
-function resolveImageFolderPath(folderPath: string): string {
-  const trimmed = folderPath.trim();
-  const appPath = app.getAppPath();
-
-  if (!trimmed) {
-    return appPath;
-  }
-
-  if (path.isAbsolute(trimmed)) {
-    throw new Error("Image folder must be relative to the app directory.");
-  }
-
-  const resolved = path.resolve(appPath, trimmed);
-  const relative = path.relative(appPath, resolved);
-
-  if (relative.startsWith("..") || path.isAbsolute(relative)) {
-    throw new Error("Relative image folder must stay inside the app directory.");
-  }
-
-  return resolved;
-}
-
-async function resolveCharacterImagesFromFolder(folderPath: string): Promise<CharacterImages> {
-  const resolvedFolder = resolveImageFolderPath(folderPath);
-  return resolveCharacterImagesFromAbsoluteFolder(resolvedFolder);
-}
-
 async function resolveCharacterImagesFromAbsoluteFolder(resolvedFolder: string): Promise<CharacterImages> {
   const entries = await readdir(resolvedFolder, { withFileTypes: true });
   const imageFiles = entries
@@ -254,9 +227,6 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("window:get-mode", () => currentWindowMode);
-  ipcMain.handle("images:resolve-folder", async (_event, folderPath: string) => {
-    return resolveCharacterImagesFromFolder(folderPath);
-  });
   ipcMain.handle("images:select-file", async () => {
     return selectImageFile();
   });

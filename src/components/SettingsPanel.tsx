@@ -186,6 +186,25 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                 onChange={(event) => setSettings({ petSize: Number(event.target.value) })}
               />
             </label>
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={settings.selfTalkEnabled}
+                onChange={(event) => setSettings({ selfTalkEnabled: event.target.checked })}
+              />
+              <span>待機中に独り言を言う</span>
+            </label>
+            <label>
+              <span>独り言の間隔 {settings.selfTalkIntervalMinutes}分</span>
+              <input
+                type="range"
+                min="1"
+                max="20"
+                value={settings.selfTalkIntervalMinutes}
+                disabled={!settings.selfTalkEnabled}
+                onChange={(event) => setSettings({ selfTalkIntervalMinutes: Number(event.target.value) })}
+              />
+            </label>
           </section>
         )}
 

@@ -25,6 +25,8 @@ export type PetSettings = {
   characterImages: CharacterImages;
   systemStyle: string;
   historyLimit: number;
+  selfTalkEnabled: boolean;
+  selfTalkIntervalMinutes: number;
   alwaysOnTop: boolean;
   transparentWindow: boolean;
 };

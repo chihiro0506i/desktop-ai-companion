@@ -1,4 +1,4 @@
-import { buildPetPrompt } from "./petPrompt";
+import { buildPetPrompt, buildSelfTalkPrompt } from "./petPrompt";
 import type { ChatMessage, PetAction, PetEmotion, PetLLMResponse, PetSettings } from "../types/pet";
 
 type OllamaGenerateResponse = {
@@ -105,6 +105,52 @@ export async function askOllama(
 
   if (data.error) {
     console.error("Ollama returned error", data.error);
+    throw new OllamaError(`Ollamaでエラーが発生しました: ${data.error}`);
+  }
+
+  return parsePetResponse(data.response ?? "");
+}
+
+export async function askSelfTalkOllama(
+  settings: Pick<
+    PetSettings,
+    "ollamaApiUrl" | "modelName" | "characterName" | "systemStyle" | "historyLimit"
+  >,
+  history: ChatMessage[]
+): Promise<PetLLMResponse> {
+  const endpoint = `${settings.ollamaApiUrl.replace(/\/$/, "")}/api/generate`;
+
+  let response: Response;
+
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: settings.modelName,
+        prompt: buildSelfTalkPrompt(settings, history),
+        stream: false,
+        format: "json",
+        think: false
+      })
+    });
+  } catch (error) {
+    console.error("Ollama self-talk connection failed", error);
+    throw new OllamaError("Ollamaに接続できません。");
+  }
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    console.error("Ollama self-talk API error", response.status, detail);
+    throw new OllamaError("Ollamaから独り言を取得できませんでした。");
+  }
+
+  const data = (await response.json()) as OllamaGenerateResponse;
+
+  if (data.error) {
+    console.error("Ollama returned self-talk error", data.error);
     throw new OllamaError(`Ollamaでエラーが発生しました: ${data.error}`);
   }
 

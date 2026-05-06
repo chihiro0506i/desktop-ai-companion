@@ -8,16 +8,6 @@ type PetProps = {
   size: number;
 };
 
-const faceMap: Record<PetEmotion, string> = {
-  idle: "^_^",
-  happy: "^o^",
-  thinking: "o_o",
-  talking: "^.^",
-  confused: "?_?",
-  sleepy: "-_-",
-  concerned: "._."
-};
-
 const labelMap: Record<PetEmotion, string> = {
   idle: "idle",
   happy: "happy",
@@ -40,13 +30,13 @@ export function Pet({ emotion, action, imageSrc, name, size }: PetProps) {
       {hasImage ? (
         <img className="pet__image" src={imageSrc} alt={name} draggable={false} />
       ) : (
-        <>
-          <div className="pet__ear pet__ear--left" />
-          <div className="pet__ear pet__ear--right" />
-          <div className="pet__body">
-            <div className="pet__face">{faceMap[emotion]}</div>
+        <div className="pet__body">
+          <div className="pet__face" aria-hidden="true">
+            <span className="pet__eye pet__eye--left" />
+            <span className="pet__eye pet__eye--right" />
+            <span className="pet__mouth" />
           </div>
-        </>
+        </div>
       )}
       <div className="pet__status">{labelMap[emotion]}</div>
       <div className="pet__shadow" />
