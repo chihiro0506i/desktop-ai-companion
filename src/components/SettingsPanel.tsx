@@ -6,7 +6,7 @@ import {
   petEmotions
 } from "../lib/characterImages";
 import { listOllamaModels, OllamaError } from "../lib/ollamaClient";
-import { searchWeb, WebSearchError } from "../lib/webSearch";
+import { getDesktopPetApiStatus, searchWeb, WebSearchError } from "../lib/webSearch";
 import { usePetStore } from "../state/petStore";
 import type { PetEmotion, WebSearchSettings } from "../types/pet";
 
@@ -33,6 +33,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     () => messages.filter((message) => message.role === "user").length,
     [messages]
   );
+  const desktopApiStatus = getDesktopPetApiStatus();
 
   function setEmotionImage(emotion: PetEmotion, value: string) {
     setSettings({
@@ -398,6 +399,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
             <button type="button" className="secondary-button" onClick={testWebSearchConnection}>
               接続テスト
             </button>
+            <p className="settings-status">{desktopApiStatus}</p>
             <p className="settings-status">
               明示検索は入力欄で `/web 検索語` と送信します。Endpointは `https://` またはローカルHTTPだけ許可します。
             </p>

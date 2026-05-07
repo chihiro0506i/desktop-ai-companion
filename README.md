@@ -75,13 +75,70 @@ concerned
 
 ## Web検索
 
-Web検索は初期状態ではOFFです。設定画面の `Search` タブで有効化し、SearXNGのEndpointを指定してください。アプリはSearXNGを同梱しないため、先にローカルまたは別サーバーでSearXNGを起動しておく必要があります。
+Web検索は初期状態ではOFFです。設定画面の `Search` タブで有効化し、SearXNGのEndpointを指定してください。SearXNGはDocker Composeで起動できます。
+
+### 初回準備
+
+初回だけ `.env` を作成します。公開リポジトリへは `.env` を含めず、`.env.example` だけを置きます。
+
+```powershell
+copy .env.example .env
+```
+
+`.env` の `SEARXNG_SECRET` は任意の長い文字列に変更してください。
+
+### SearXNGの起動
+
+```powershell
+npm run services:up
+```
+
+起動状態の確認:
+
+```powershell
+docker compose ps
+```
+
+検索APIの確認:
+
+```powershell
+npm run services:test
+```
 
 ```text
 Endpoint: http://localhost:8080
 ```
 
 `Search` タブの `接続テスト` で、指定したEndpointから検索結果を取得できるか確認できます。
+
+ログを見る場合:
+
+```powershell
+npm run services:logs
+```
+
+### SearXNGの停止
+
+SearXNGだけを止める場合:
+
+```powershell
+npm run services:down
+```
+
+Dockerコンテナが残っているか確認する場合:
+
+```powershell
+docker compose ps
+```
+
+`Web検索APIが利用できません。アプリを再起動してください。` と出る場合は、古いElectronプロセスが残っている可能性があります。現在の `npm run dev` は起動前に古い開発プロセスを止めます。手動で止める場合は次を実行してください。
+
+```powershell
+npm run dev:stop
+npm run dev
+```
+
+`http://localhost:5173` を通常のブラウザで開いた場合、Electronのpreload APIが存在しないためWeb検索は使えません。必ず `npm run dev` で起動した小さいElectronウィンドウ側で操作してください。Searchタブに `Desktop API OK` と表示されていれば、Electron側のAPIは有効です。
 
 会話入力欄で次のように送信すると、検索結果をOllamaのプロンプトへ渡して回答します。
 
@@ -134,9 +191,43 @@ API URL: http://localhost:11434
 
 ## 開発環境の起動
 
-```bash
+初回:
+
+```powershell
 npm install
+copy .env.example .env
+```
+
+Web検索を使う場合はSearXNGを起動します。
+
+```powershell
+npm run services:up
+```
+
+アプリ本体を起動します。
+
+```powershell
 npm run dev
+```
+
+`npm run dev` は、古い開発用Electron/Viteプロセスを止めてから起動します。手動で止めたい場合は次を使います。
+
+```powershell
+npm run dev:stop
+```
+
+### 開発環境の停止
+
+アプリ本体を止める場合は、`npm run dev` を実行しているPowerShellで `Ctrl+C` を押します。ウィンドウだけ残る場合は次を実行してください。
+
+```powershell
+npm run dev:stop
+```
+
+SearXNGも止める場合:
+
+```powershell
+npm run services:down
 ```
 
 ## 品質確認

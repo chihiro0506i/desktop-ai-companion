@@ -23,6 +23,10 @@ type WebSearchResult = {
 };
 
 contextBridge.exposeInMainWorld("desktopPet", {
+  getApiInfo: () => ({
+    version: "2026-05-07-web-search",
+    capabilities: ["window", "images", "web-search"]
+  }),
   getWindowMode: (): Promise<WindowMode> => ipcRenderer.invoke("window:get-mode"),
   setWindowMode: (mode: Partial<WindowMode>): Promise<WindowMode> =>
     ipcRenderer.invoke("window:set-mode", mode),

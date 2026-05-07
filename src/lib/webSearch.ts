@@ -28,6 +28,21 @@ export function formatSearchReferences(results: WebSearchResult[]): string {
     .join("\n");
 }
 
+export function getDesktopPetApiStatus(): string {
+  if (!window.desktopPet) {
+    return "Desktop APIなし。Electronアプリではなくブラウザで開いている可能性があります。";
+  }
+
+  const apiInfo = window.desktopPet.getApiInfo?.();
+  const capabilities = apiInfo?.capabilities ?? [];
+
+  if (!window.desktopPet.searchWeb || !capabilities.includes("web-search")) {
+    return "Desktop APIは古い状態です。Electronを完全終了して npm run dev で起動し直してください。";
+  }
+
+  return `Desktop API OK (${apiInfo?.version ?? "unknown"})`;
+}
+
 function normalizeSearchErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
 
@@ -81,7 +96,7 @@ export async function searchWeb(query: string, settings: WebSearchSettings): Pro
   }
 
   if (!window.desktopPet?.searchWeb) {
-    throw new WebSearchError("Web検索APIが利用できません。アプリを再起動してください。");
+    throw new WebSearchError(getDesktopPetApiStatus());
   }
 
   try {

@@ -22,8 +22,14 @@ type DesktopPetWebSearchResult = {
   fetchedAt: number;
 };
 
+type DesktopPetApiInfo = {
+  version: string;
+  capabilities: string[];
+};
+
 interface Window {
   desktopPet?: {
+    getApiInfo: () => DesktopPetApiInfo;
     getWindowMode: () => Promise<DesktopPetWindowMode>;
     setWindowMode: (mode: Partial<DesktopPetWindowMode>) => Promise<DesktopPetWindowMode>;
     selectImageFile: () => Promise<string | null>;
