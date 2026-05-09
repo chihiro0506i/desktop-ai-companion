@@ -21,11 +21,19 @@ type WebSearchResult = {
   source: string;
   fetchedAt: number;
 };
+type ExternalApiOptions = {
+  apiUrl?: string;
+  model?: string;
+};
+type ExternalChatOptions = ExternalApiOptions & {
+  prompt?: string;
+  jsonMode?: boolean;
+};
 
 contextBridge.exposeInMainWorld("desktopPet", {
   getApiInfo: () => ({
     version: "2026-05-07-web-search",
-    capabilities: ["window", "images", "web-search"]
+    capabilities: ["window", "images", "web-search", "external-api"]
   }),
   getWindowMode: (): Promise<WindowMode> => ipcRenderer.invoke("window:get-mode"),
   setWindowMode: (mode: Partial<WindowMode>): Promise<WindowMode> =>
@@ -33,5 +41,12 @@ contextBridge.exposeInMainWorld("desktopPet", {
   selectImageFile: (): Promise<string | null> => ipcRenderer.invoke("images:select-file"),
   selectImageFolder: (): Promise<CharacterImages | null> => ipcRenderer.invoke("images:select-folder"),
   searchWeb: (query: string, options: WebSearchOptions): Promise<WebSearchResult[]> =>
-    ipcRenderer.invoke("web-search:search", query, options)
+    ipcRenderer.invoke("web-search:search", query, options),
+  setExternalApiKey: (apiKey: string): Promise<boolean> => ipcRenderer.invoke("external-api:set-key", apiKey),
+  clearExternalApiKey: (): Promise<void> => ipcRenderer.invoke("external-api:clear-key"),
+  hasExternalApiKey: (): Promise<boolean> => ipcRenderer.invoke("external-api:has-key"),
+  listExternalModels: (options: ExternalApiOptions): Promise<string[]> =>
+    ipcRenderer.invoke("external-api:list-models", options),
+  requestExternalChat: (options: ExternalChatOptions): Promise<string> =>
+    ipcRenderer.invoke("external-api:chat", options)
 });

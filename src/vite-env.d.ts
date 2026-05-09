@@ -21,6 +21,14 @@ type DesktopPetWebSearchResult = {
   source: string;
   fetchedAt: number;
 };
+type DesktopPetExternalApiOptions = {
+  apiUrl?: string;
+  model?: string;
+};
+type DesktopPetExternalChatOptions = DesktopPetExternalApiOptions & {
+  prompt?: string;
+  jsonMode?: boolean;
+};
 
 type DesktopPetApiInfo = {
   version: string;
@@ -35,5 +43,10 @@ interface Window {
     selectImageFile: () => Promise<string | null>;
     selectImageFolder: () => Promise<DesktopPetCharacterImages | null>;
     searchWeb: (query: string, options: DesktopPetWebSearchOptions) => Promise<DesktopPetWebSearchResult[]>;
+    setExternalApiKey: (apiKey: string) => Promise<boolean>;
+    clearExternalApiKey: () => Promise<void>;
+    hasExternalApiKey: () => Promise<boolean>;
+    listExternalModels: (options: DesktopPetExternalApiOptions) => Promise<string[]>;
+    requestExternalChat: (options: DesktopPetExternalChatOptions) => Promise<string>;
   };
 }

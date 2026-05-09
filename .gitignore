@@ -3,6 +3,7 @@ dist/
 dist-electron/
 release/
 AGENTS.md
+task.md
 image/
 images/
 documents/

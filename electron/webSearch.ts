@@ -58,12 +58,12 @@ function validateSearchEndpoint(endpoint: unknown): URL {
   }
 
   const url = new URL(endpoint.trim());
-  const isHttps = url.protocol === "https:";
-  const isLocalHttp =
-    url.protocol === "http:" && (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+  const isLocalProtocol = url.protocol === "http:" || url.protocol === "https:";
+  const isLocalHost =
+    url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1" || url.hostname === "[::1]";
 
-  if (!isHttps && !isLocalHttp) {
-    throw new Error("Search endpoint must be https or local http.");
+  if (!isLocalProtocol || !isLocalHost) {
+    throw new Error("Search endpoint must be local http or local https.");
   }
 
   url.username = "";

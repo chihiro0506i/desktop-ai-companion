@@ -11,6 +11,8 @@ export type PetAction = "none" | "wave" | "jump" | "sleep" | "nod";
 
 export type CharacterImages = Record<PetEmotion, string>;
 
+export type AiProvider = "ollama" | "openai-compatible";
+
 export type WebSearchProvider = "disabled" | "searxng" | "api";
 
 export type WebSearchSettings = {
@@ -37,8 +39,11 @@ export type PetLLMResponse = {
 };
 
 export type PetSettings = {
+  aiProvider: AiProvider;
   ollamaApiUrl: string;
   modelName: string;
+  externalApiUrl: string;
+  externalModelName: string;
   petSize: number;
   characterName: string;
   characterImages: CharacterImages;

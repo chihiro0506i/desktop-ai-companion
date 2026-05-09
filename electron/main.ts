@@ -4,6 +4,14 @@ import isDev from "electron-is-dev";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
+import {
+  clearExternalApiKey,
+  hasExternalApiKey,
+  listExternalModels,
+  requestExternalChat,
+  setExternalApiKey,
+  type ExternalChatOptions
+} from "./externalApi.js";
 import { searchWeb, type WebSearchOptions } from "./webSearch.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -236,6 +244,21 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("web-search:search", async (_event, query: string, options: WebSearchOptions) => {
     return searchWeb(query, options);
+  });
+  ipcMain.handle("external-api:set-key", (_event, apiKey: string) => {
+    return setExternalApiKey(apiKey);
+  });
+  ipcMain.handle("external-api:clear-key", () => {
+    clearExternalApiKey();
+  });
+  ipcMain.handle("external-api:has-key", () => {
+    return hasExternalApiKey();
+  });
+  ipcMain.handle("external-api:list-models", async (_event, options: { apiUrl?: string; model?: string }) => {
+    return listExternalModels(options);
+  });
+  ipcMain.handle("external-api:chat", async (_event, options: ExternalChatOptions) => {
+    return requestExternalChat(options);
   });
 
   createWindow();

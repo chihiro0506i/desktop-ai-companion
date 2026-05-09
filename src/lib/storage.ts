@@ -5,13 +5,17 @@ const settingsKey = "local-llm-desktop-pet:settings";
 const messagesKey = "local-llm-desktop-pet:messages";
 
 export const defaultSettings: PetSettings = {
+  aiProvider: "ollama",
   ollamaApiUrl: "http://localhost:11434",
-  modelName: "qwen3.5:2b",
+  modelName: "qwen3.5:9b",
+  externalApiUrl: "",
+  externalModelName: "",
   petSize: 145,
   characterName: "Desktop Pet",
   characterImages: createEmptyCharacterImages(),
-  systemStyle: "短く、親しみやすく、作業を邪魔しない相棒として返答する。",
-  historyLimit: 12,
+  systemStyle:
+    "かわいい常駐キャラとして親しみやすさを保ちつつ、実務的な秘書として要点整理、手順化、比較、下書き作成まで丁寧に支援する。根拠が必要な話題ではWeb検索結果を使い、分からないことは断定しない。",
+  historyLimit: 20,
   selfTalkEnabled: true,
   selfTalkIntervalMinutes: 1,
   webSearch: {
@@ -34,7 +38,13 @@ export function loadSettings(): PetSettings {
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<PetSettings> & { characterImageSrc?: string };
+    const parsed = JSON.parse(raw) as Partial<PetSettings> & {
+      characterImageSrc?: string;
+      externalApiKey?: unknown;
+    };
+    const settingsWithoutSecrets = { ...parsed };
+    delete settingsWithoutSecrets.characterImageSrc;
+    delete settingsWithoutSecrets.externalApiKey;
     const legacyImageSrc =
       typeof parsed.characterImageSrc === "string" ? normalizeImageSource(parsed.characterImageSrc) : "";
     const loadedImages = mergeCharacterImages(parsed.characterImages, legacyImageSrc);
@@ -46,15 +56,23 @@ export function loadSettings(): PetSettings {
       defaultSettings.characterImages
     );
 
-    return {
+    const loadedSettings = {
       ...defaultSettings,
-      ...parsed,
+      ...settingsWithoutSecrets,
+      modelName:
+        parsed.modelName === "qwen3.5:2b" ? defaultSettings.modelName : parsed.modelName ?? defaultSettings.modelName,
       characterImages,
       webSearch: {
         ...defaultSettings.webSearch,
         ...(parsed.webSearch ?? {})
       }
     };
+
+    if (Object.prototype.hasOwnProperty.call(parsed, "externalApiKey")) {
+      window.localStorage.setItem(settingsKey, JSON.stringify(loadedSettings));
+    }
+
+    return loadedSettings;
   } catch (error) {
     console.error("Failed to load settings", error);
     return defaultSettings;

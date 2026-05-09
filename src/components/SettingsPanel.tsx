@@ -1,14 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createEmptyCharacterImages,
   normalizeImageSource,
   petEmotionLabels,
   petEmotions
 } from "../lib/characterImages";
-import { listOllamaModels, OllamaError } from "../lib/ollamaClient";
+import { listExternalModels, listOllamaModels, OllamaError } from "../lib/ollamaClient";
 import { getDesktopPetApiStatus, searchWeb, WebSearchError } from "../lib/webSearch";
 import { usePetStore } from "../state/petStore";
-import type { PetEmotion, WebSearchSettings } from "../types/pet";
+import type { AiProvider, PetEmotion, WebSearchSettings } from "../types/pet";
 
 type SettingsPanelProps = {
   open: boolean;
@@ -21,8 +21,12 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("character");
   const [imageStatus, setImageStatus] = useState("");
   const [ollamaStatus, setOllamaStatus] = useState("");
+  const [externalStatus, setExternalStatus] = useState("");
+  const [externalApiKeyInput, setExternalApiKeyInput] = useState("");
+  const [hasExternalApiKey, setHasExternalApiKey] = useState(false);
   const [searchStatus, setSearchStatus] = useState("");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableExternalModels, setAvailableExternalModels] = useState<string[]>([]);
   const messages = usePetStore((state) => state.messages);
   const settings = usePetStore((state) => state.settings);
   const setSettings = usePetStore((state) => state.setSettings);
@@ -34,6 +38,24 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     [messages]
   );
   const desktopApiStatus = getDesktopPetApiStatus();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshKeyStatus() {
+      const hasKey = await window.desktopPet?.hasExternalApiKey?.();
+
+      if (!cancelled) {
+        setHasExternalApiKey(Boolean(hasKey));
+      }
+    }
+
+    void refreshKeyStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function setEmotionImage(emotion: PetEmotion, value: string) {
     setSettings({
@@ -134,6 +156,45 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
       setAvailableModels([]);
       setOllamaStatus(message);
     }
+  }
+
+  async function refreshExternalModels() {
+    setExternalStatus("外部APIを確認中...");
+
+    try {
+      if (externalApiKeyInput.trim()) {
+        const hasKey = await window.desktopPet?.setExternalApiKey?.(externalApiKeyInput);
+        setHasExternalApiKey(Boolean(hasKey));
+      }
+
+      const models = await listExternalModels(settings);
+      setAvailableExternalModels(models);
+      setExternalStatus(
+        models.length > 0
+          ? `接続OK。${models.length}件のモデルを取得しました。`
+          : "接続OK。モデル一覧は空でした。モデル名を手入力してください。"
+      );
+    } catch (error) {
+      const message =
+        error instanceof OllamaError
+          ? error.message
+          : "外部API接続確認中に問題が起きました。";
+      setAvailableExternalModels([]);
+      setExternalStatus(message);
+    }
+  }
+
+  async function updateExternalApiKey(value: string) {
+    setExternalApiKeyInput(value);
+    const hasKey = await window.desktopPet?.setExternalApiKey?.(value);
+    setHasExternalApiKey(Boolean(hasKey));
+  }
+
+  async function clearExternalApiKey() {
+    setExternalApiKeyInput("");
+    await window.desktopPet?.clearExternalApiKey?.();
+    setHasExternalApiKey(false);
+    setExternalStatus("外部API Keyをこのセッションから削除しました。");
   }
 
   async function testWebSearchConnection() {
@@ -290,48 +351,118 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
         {activeTab === "ollama" && (
           <section className="settings-section">
             <label>
-              <span>Model</span>
-              <input
-                value={settings.modelName}
-                onChange={(event) => setSettings({ modelName: event.target.value })}
-              />
+              <span>AI Provider</span>
+              <select
+                value={settings.aiProvider}
+                onChange={(event) => setSettings({ aiProvider: event.target.value as AiProvider })}
+              >
+                <option value="ollama">Ollama</option>
+                <option value="openai-compatible">External API</option>
+              </select>
             </label>
-            {availableModels.length > 0 && (
-              <label>
-                <span>取得済みモデル</span>
-                <select
-                  value={settings.modelName}
-                  onChange={(event) => setSettings({ modelName: event.target.value })}
-                >
-                  {availableModels.map((model) => (
-                    <option key={model} value={model}>
-                      {model}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            {settings.aiProvider === "ollama" && (
+              <>
+                <label>
+                  <span>Ollama Model</span>
+                  <input
+                    value={settings.modelName}
+                    onChange={(event) => setSettings({ modelName: event.target.value })}
+                  />
+                </label>
+                {availableModels.length > 0 && (
+                  <label>
+                    <span>取得済みモデル</span>
+                    <select
+                      value={settings.modelName}
+                      onChange={(event) => setSettings({ modelName: event.target.value })}
+                    >
+                      {availableModels.map((model) => (
+                        <option key={model} value={model}>
+                          {model}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <label>
+                  <span>Ollama API URL</span>
+                  <input
+                    value={settings.ollamaApiUrl}
+                    onChange={(event) => setSettings({ ollamaApiUrl: event.target.value })}
+                  />
+                </label>
+                <button type="button" className="secondary-button" onClick={refreshOllamaModels}>
+                  接続テスト / モデル取得
+                </button>
+                {ollamaStatus && <p className="settings-status">{ollamaStatus}</p>}
+              </>
             )}
-            <label>
-              <span>API URL</span>
-              <input
-                value={settings.ollamaApiUrl}
-                onChange={(event) => setSettings({ ollamaApiUrl: event.target.value })}
-              />
-            </label>
+            {settings.aiProvider === "openai-compatible" && (
+              <>
+                <label>
+                  <span>External API URL</span>
+                  <input
+                    value={settings.externalApiUrl}
+                    placeholder="https://api.example.com/v1"
+                    onChange={(event) => setSettings({ externalApiUrl: event.target.value })}
+                  />
+                </label>
+                <label>
+                  <span>External Model</span>
+                  <input
+                    value={settings.externalModelName}
+                    placeholder="OpenAI-compatible model name"
+                    onChange={(event) => setSettings({ externalModelName: event.target.value })}
+                  />
+                </label>
+                {availableExternalModels.length > 0 && (
+                  <label>
+                    <span>取得済み外部モデル</span>
+                    <select
+                      value={settings.externalModelName}
+                      onChange={(event) => setSettings({ externalModelName: event.target.value })}
+                    >
+                      {availableExternalModels.map((model) => (
+                        <option key={model} value={model}>
+                          {model}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <label>
+                  <span>External API Key</span>
+                  <input
+                    type="password"
+                    value={externalApiKeyInput}
+                    placeholder={hasExternalApiKey ? "設定済み。このセッションだけ保持します" : "保存せず、このセッションだけ保持します"}
+                    onChange={(event) => void updateExternalApiKey(event.target.value)}
+                  />
+                </label>
+                <div className="button-row">
+                  <button type="button" className="secondary-button" onClick={refreshExternalModels}>
+                    外部API接続テスト
+                  </button>
+                  <button type="button" className="secondary-button" onClick={clearExternalApiKey}>
+                    Key削除
+                  </button>
+                </div>
+                <p className="settings-status">
+                  外部APIはOpenAI互換の `/chat/completions` と `/models` を想定します。API Keyは保存せず、アプリ起動中のElectron main processだけで保持します。
+                </p>
+                {externalStatus && <p className="settings-status">{externalStatus}</p>}
+              </>
+            )}
             <label>
               <span>会話文脈 {settings.historyLimit}件</span>
               <input
                 type="range"
                 min="4"
-                max="30"
+                max="40"
                 value={settings.historyLimit}
                 onChange={(event) => setSettings({ historyLimit: Number(event.target.value) })}
               />
             </label>
-            <button type="button" className="secondary-button" onClick={refreshOllamaModels}>
-              接続テスト / モデル取得
-            </button>
-            {ollamaStatus && <p className="settings-status">{ollamaStatus}</p>}
           </section>
         )}
 
@@ -401,7 +532,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
             </button>
             <p className="settings-status">{desktopApiStatus}</p>
             <p className="settings-status">
-              明示検索は入力欄で `/web 検索語` と送信します。Endpointは `https://` またはローカルHTTPだけ許可します。
+              明示検索は入力欄で `/web 検索語` と送信します。EndpointはこのPC上のSearXNGだけ許可します。
             </p>
             {searchStatus && <p className="settings-status">{searchStatus}</p>}
           </section>

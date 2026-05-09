@@ -54,8 +54,8 @@ function normalizeSearchErrorMessage(error: unknown): string {
     return "Search Endpointを設定してください。";
   }
 
-  if (/Search endpoint must be https or local http/i.test(message)) {
-    return "Endpointは https:// または http://localhost / http://127.0.0.1 のみ許可しています。";
+  if (/Search endpoint must be local http or local https|Search endpoint must be https or local http/i.test(message)) {
+    return "Endpointは http://localhost / http://127.0.0.1 / http://[::1] など，このPC上のSearXNGだけ許可しています。";
   }
 
   if (/Web search is disabled/i.test(message)) {

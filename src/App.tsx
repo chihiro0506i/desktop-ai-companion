@@ -165,6 +165,7 @@ export default function App() {
       if (
         cancelled ||
         !latestSettingsRef.current.selfTalkEnabled ||
+        latestSettingsRef.current.aiProvider === "openai-compatible" ||
         isLoading ||
         isSettingsOpen ||
         selfTalkBusyRef.current ||

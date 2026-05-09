@@ -62,6 +62,7 @@ button {
 }
 
 .pet-button,
+.speech-bubble,
 .chat-input,
 .settings-fab,
 .settings-drawer,
@@ -260,8 +261,8 @@ button {
   position: relative;
   width: min(100%, 308px);
   max-height: 92px;
-  overflow: auto;
-  padding: 10px 12px;
+  overflow: hidden;
+  padding: 0;
   border: 1px solid rgb(32 36 42 / 18%);
   border-radius: 12px;
   background: rgb(255 255 255 / 86%);
@@ -269,9 +270,31 @@ button {
   color: #20242a;
   font-size: 13px;
   line-height: 1.55;
+  backdrop-filter: blur(12px);
+}
+
+.speech-bubble__content {
+  max-height: inherit;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 10px 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  backdrop-filter: blur(12px);
+  -webkit-app-region: no-drag;
+}
+
+.speech-bubble__content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.speech-bubble__content::-webkit-scrollbar-track {
+  background: rgb(32 36 42 / 6%);
+  border-radius: 999px;
+}
+
+.speech-bubble__content::-webkit-scrollbar-thumb {
+  background: rgb(32 36 42 / 28%);
+  border-radius: 999px;
 }
 
 .speech-bubble::after {
